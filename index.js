@@ -13,7 +13,7 @@ require('dotenv').config();
 // Middleware
 app.use(cors(
     {
-        origin: 'http://localhost:3000',
+        origin: 'http://localhost:5000',
         credentials: true,
     }
 ));
@@ -27,7 +27,7 @@ app.get('/', (req, res) => {
 }
 );
 
-const uri = `mongodb+srv://${process.env.acadenyUser}:${process.env.acadenyPass}@cluster0.ljq2tzl.mongodb.net/?retryWrites=true&w=majority`;
+const uri = `mongodb+srv://${process.env.academyUser}:${process.env.academyPassword}@cluster0.gghp2r5.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -62,8 +62,8 @@ async function run() {
 
         //end code ----------------------------------------------
         // Send a ping to confirm a successful connection
-        // await client.db("admin").command({ ping: 1 });
-        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        await client.db("admin").command({ ping: 1 });
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
