@@ -13,7 +13,7 @@ require('dotenv').config();
 // Middleware
 app.use(cors(
     {
-        origin: 'http://localhost:5000',
+        origin: 'http://localhost:5173',
         credentials: true,
     }
 ));
@@ -45,6 +45,33 @@ async function run() {
         // await client.connect();
         // start code----------------------------------------------------------
 
+        // Get the database and collection on which to run the operation
+        const database = client.db("mart-academy");
+        const banner = database.collection("banner");
+
+        // end database and collection code--------------------------------
+
+        //banner api --------------------------------
+        app.get('/api/v1/banner', async (req, res) => {
+            const cursor = banner.find({});
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+
+        //end banner api --------------------------------
+
+        //faq api --------------------------------
+        app.get('/api/v1/faq', async (req, res) => {
+            const cursor = database.collection("faq").find({});
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+        //end faq api --------------------------------
+
+
+
+
+
 
 
 
@@ -62,8 +89,8 @@ async function run() {
 
         //end code ----------------------------------------------
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
