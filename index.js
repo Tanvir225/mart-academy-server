@@ -5,7 +5,7 @@ const port = process.env.PORT || 5000;
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 //require('dotenv').config();
 require('dotenv').config();
@@ -13,7 +13,7 @@ require('dotenv').config();
 // Middleware
 app.use(cors(
     {
-        origin: ['http://localhost:5173','http://hideous-ray.surge.sh'],
+        origin: ['http://localhost:5173', 'https://hideous-ray.surge.sh'],
         credentials: true,
     }
 ));
@@ -48,8 +48,11 @@ async function run() {
         // Get the database and collection on which to run the operation
         const database = client.db("mart-academy");
         const banner = database.collection("banner");
+        const faq = database.collection("faq");
+        const courses = database.collection("courses");
 
         // end database and collection code--------------------------------
+
 
         //banner api --------------------------------
         app.get('/api/v1/banner', async (req, res) => {
@@ -62,11 +65,41 @@ async function run() {
 
         //faq api --------------------------------
         app.get('/api/v1/faq', async (req, res) => {
-            const cursor = database.collection("faq").find({});
+            const cursor = faq.find({});
             const result = await cursor.toArray();
             res.send(result);
         });
         //end faq api --------------------------------
+
+        //courses api with query -----------------------------
+
+        app.get('/api/v1/courses', async (req, res) => {
+
+            // filter by it
+            let query = {};
+            // if () {
+            //     query = { category: category };
+            // }
+            const cursor = courses.find(query);
+            const result = await cursor.toArray();
+            res.send(result);
+        }
+        );
+
+        //sigle course api -----------------------------
+        app.get('/api/v1/courses/:id', async (req, res) => {
+            const id = req.params.id;
+            // console.log(id);
+            const query = { _id: new ObjectId(id) };
+            const result = await courses.findOne(query);
+            res.send(result);
+        });
+
+
+        //end courses api --------------------------------
+
+
+
 
 
 
