@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const e = require('express');
 
 //require('dotenv').config();
 require('dotenv').config();
@@ -50,6 +51,7 @@ async function run() {
         const banner = database.collection("banner");
         const faq = database.collection("faq");
         const courses = database.collection("courses");
+        const users = database.collection("users");
 
         // end database and collection code--------------------------------
 
@@ -97,6 +99,38 @@ async function run() {
 
 
         //end courses api --------------------------------
+
+
+        // users api --------------------------------
+
+        //user get by email api
+        app.get('/api/v1/users', async (req, res) => {
+            const email = req.query.email;
+            let result;
+            // console.log(email);
+            const query = { email: email };
+            // console.log(query);
+            if (query?.email) {
+                // If email is provided, find user by email
+                result = await users.findOne(query);
+
+            }
+            else {
+                // If no email is provided, return all users
+                const cursor = users.find({});
+                result = await cursor.toArray();
+            }
+
+            res.send(result);
+        });
+
+        //user post api
+        app.post('/api/v1/users', async (req, res) => {
+            const user = req.body;
+            // console.log(user);
+            const result = await users.insertOne(user);
+            res.send(result);
+        });
 
 
 
