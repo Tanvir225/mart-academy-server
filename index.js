@@ -21,6 +21,25 @@ app.use(cors(
 app.use(express.json());
 app.use(cookieParser());
 
+//custom middleware to verify jwt token
+const verifyToken = async (req, res, next) => {
+    //token from cookie
+    const token = req?.cookies?.token;
+    // console.log(token);
+    if (!token) {
+        return res.status(401).send({ message: 'Unauthorized access' });
+    }
+
+    //verify token
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).send({ message: 'Forbidden access' });
+        }
+        req.decoded = decoded;
+        next();
+    });
+};
+
 
 // Routes
 app.get('/', (req, res) => {
@@ -55,6 +74,25 @@ async function run() {
 
         // end database and collection code--------------------------------
 
+        //verify admin middleware--------------------------
+        const verifyAdmin = async (req, res, next) => {
+            const email = req?.decoded?.email;
+            // console.log('email inside verify admin', email);
+            const query = { email: email };
+
+            //user find from database
+            const user = await users.findOne(query);
+            // console.log('user inside verify admin', user);
+
+            //check user role
+            const isAdmin = user?.role === 'admin';
+            if (!isAdmin) {
+                return res.status(403).send({ message: 'Forbidden access' });
+            }
+            next();
+        };
+        //end verify admin middleware--------------------------
+
 
         //banner api --------------------------------
         app.get('/api/v1/banner', async (req, res) => {
@@ -64,6 +102,46 @@ async function run() {
         });
 
         //end banner api --------------------------------
+
+
+        //jwt token api ------------------------------
+        app.post('/api/v1/jwt', (req, res) => {
+            const user = req.body;
+            // console.log(user);
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+
+            //token in cookie
+            res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None', maxAge: 3600000 }); // 1 hour
+            res.send({ status: true });
+
+        });
+
+        //end jwt token api ------------------------------
+
+        //addmin check api ------------------------------
+       
+        app.get("/api/v1/admin/:email", verifyToken, async (req, res) => {
+            const email = req.params.email;
+            //console.log(email,req.decodedUser?.email);
+            if (req.decoded?.email !== email) {
+                return res.status(403).send({ status: "forbidden Access" });
+            }
+
+            let query = { email: email };
+
+            //find user by query
+            const user = await users.findOne(query);
+
+            // //make a admin false initially
+            let isAdmin = false;
+
+            if (user) {
+                isAdmin = user?.role === "admin";
+            }
+
+            res.send({ isAdmin: isAdmin });
+        });
+        //end admin check api ------------------------------
 
         //faq api --------------------------------
         app.get('/api/v1/faq', async (req, res) => {
