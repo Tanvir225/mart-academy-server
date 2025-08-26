@@ -107,7 +107,7 @@ async function run() {
         //jwt token api ------------------------------
         app.post('/api/v1/jwt', (req, res) => {
             const user = req.body;
-            // console.log(user);
+            console.log(user, 'inside jwt');
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
 
             //token in cookie
