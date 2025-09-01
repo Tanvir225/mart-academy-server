@@ -119,7 +119,7 @@ async function run() {
         //end jwt token api ------------------------------
 
         //addmin check api ------------------------------
-       
+
         app.get("/api/v1/admin/:email", verifyToken, async (req, res) => {
             const email = req.params.email;
             //console.log(email,req.decodedUser?.email);
@@ -209,6 +209,37 @@ async function run() {
             const result = await users.insertOne(user);
             res.send(result);
         });
+
+        //single user delete api
+        app.delete('/api/v1/users/:email', verifyToken, verifyAdmin, async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const result = await users.deleteOne(query);
+            res.send(result);
+        });
+
+        //single user get api
+        app.get('/api/v1/users/:email', verifyToken, verifyAdmin, async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const result = await users.findOne(query);
+            res.send(result);
+        });
+
+        //logout api
+        app.post('/api/v1/logout', (req, res) => {
+            res.clearCookie('token', {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'None', // must match your cookie options!
+                path: '/',        // also ensure path matches if you used it when setting cookie
+            });
+            res.send({ message: 'Logged out successfully' });
+        });
+        //end users api --------------------------------
+
+
+
 
 
 
