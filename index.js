@@ -182,7 +182,7 @@ async function run() {
         // users api --------------------------------
 
         //user get by email api
-        app.get('/api/v1/users', async (req, res) => {
+        app.get('/api/v1/users',verifyToken, async (req, res) => {
             const email = req.query.email;
             let result;
             // console.log(email);
@@ -218,13 +218,7 @@ async function run() {
             res.send(result);
         });
 
-        //single user get api
-        app.get('/api/v1/users/:email', verifyToken, verifyAdmin, async (req, res) => {
-            const email = req.params.email;
-            const query = { email: email };
-            const result = await users.findOne(query);
-            res.send(result);
-        });
+  
 
         //logout api
         app.post('/api/v1/logout', (req, res) => {
