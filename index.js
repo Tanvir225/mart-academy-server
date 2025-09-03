@@ -14,7 +14,7 @@ require('dotenv').config();
 // Middleware
 app.use(cors(
     {
-        origin: ['http://localhost:5173', 'https://hideous-ray.surge.sh'],
+        origin: ['http://localhost:5173', 'https://hideous-ray.surge.sh', 'https://mart-academy.web.app'],
         credentials: true,
     }
 ));
