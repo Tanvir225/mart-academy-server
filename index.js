@@ -14,7 +14,7 @@ require('dotenv').config();
 // Middleware
 app.use(cors(
     {
-        origin: ['http://localhost:5173', 'https://hideous-ray.surge.sh', 'https://mart-academy.web.app'],
+        origin: ['http://localhost:5173', 'https://hideous-ray.surge.sh', 'https://mart-academy.web.app', 'https://mart-academy.firebaseapp.com'],
         credentials: true,
     }
 ));
@@ -111,7 +111,14 @@ async function run() {
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
 
             //token in cookie
-            res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None', maxAge: 3600000 }); // 1 hour
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',  // secure only in prod
+                sameSite: 'None',
+                path: '/',       // make sure cookie works everywhere
+                maxAge: 3600000  // 1 hour
+            });
+
             res.send({ status: true });
 
         });
@@ -182,7 +189,7 @@ async function run() {
         // users api --------------------------------
 
         //user get by email api
-        app.get('/api/v1/users',verifyToken, async (req, res) => {
+        app.get('/api/v1/users', verifyToken, async (req, res) => {
             const email = req.query.email;
             let result;
             // console.log(email);
@@ -218,16 +225,17 @@ async function run() {
             res.send(result);
         });
 
-  
+
 
         //logout api
         app.post('/api/v1/logout', (req, res) => {
             res.clearCookie('token', {
                 httpOnly: true,
-                secure: true,
-                sameSite: 'None', // must match your cookie options!
-                path: '/',        // also ensure path matches if you used it when setting cookie
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'None',
+                path: '/'
             });
+
             res.send({ message: 'Logged out successfully' });
         });
         //end users api --------------------------------
