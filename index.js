@@ -215,18 +215,6 @@ async function run() {
         });
 
 
-
-        //logout api
-        app.post('/api/v1/logout', (req, res) => {
-            res.clearCookie('token', {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'None',
-                path: '/'
-            });
-
-            res.send({ message: 'Logged out successfully' });
-        });
         //end users api --------------------------------
 
 
