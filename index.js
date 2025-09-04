@@ -14,7 +14,13 @@ require('dotenv').config();
 // Middleware
 app.use(cors(
     {
-        origin: ['http://localhost:5173', 'https://hideous-ray.surge.sh', 'https://mart-academy.web.app', 'https://mart-academy.firebaseapp.com'],
+        origin: [
+            "http://localhost:5173",
+            "https://hideous-ray.surge.sh",
+            "https://mart-academy.web.app",
+            "https://mart-academy.firebaseapp.com",
+            "https://mart-academy.vercel.app"
+        ],
         credentials: true,
     }
 ));
@@ -109,14 +115,13 @@ async function run() {
             const user = req.body;
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
 
-            const isProduction = process.env.NODE_ENV === "production";
-
-            res.cookie('token', token, {
+            res.cookie("token", token, {
                 httpOnly: true,
-                secure: isProduction,   // only true in prod
-                sameSite: isProduction ? 'None' : 'Lax',
-                maxAge: 3600000
+                secure: process.env.NODE_ENV === "production", // true in production
+                sameSite: "none",                              // allow cross-origin
+                maxAge: 24 * 60 * 60 * 1000                    // 1 day
             });
+
             res.send({ status: true });
         });
 
@@ -187,7 +192,7 @@ async function run() {
         // users api --------------------------------
 
         //user get by email api
-        app.get('/api/v1/users', verifyToken, async (req, res) => {
+        app.get('/api/v1/users', verifyToken, verifyAdmin, async (req, res) => {
             const email = req.query.email;
             let result;
             // console.log(email);
