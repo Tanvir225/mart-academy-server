@@ -14,7 +14,7 @@ require('dotenv').config();
 // Middleware
 app.use(cors(
     {
-        origin: ['http://localhost:5173', 'https://hideous-ray.surge.sh','https://mart-academy.web.app','https://mart-academy.firebaseapp.com'],
+        origin: ['http://localhost:5173', 'https://hideous-ray.surge.sh', 'https://mart-academy.web.app', 'https://mart-academy.firebaseapp.com'],
         credentials: true,
     }
 ));
@@ -107,14 +107,19 @@ async function run() {
         //jwt token api ------------------------------
         app.post('/api/v1/jwt', (req, res) => {
             const user = req.body;
-            console.log(user, 'inside jwt');
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
 
-            //token in cookie
-            res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None', maxAge: 3600000 }); // 1 hour
-            res.send({ status: true });
+            const isProduction = process.env.NODE_ENV === "production";
 
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: isProduction,   // only true in prod
+                sameSite: isProduction ? 'None' : 'Lax',
+                maxAge: 3600000
+            });
+            res.send({ status: true });
         });
+
 
         //end jwt token api ------------------------------
 
