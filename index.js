@@ -14,34 +14,31 @@ require('dotenv').config();
 // Middleware
 app.use(cors(
     {
-        origin: ['http://localhost:5173', 'https://hideous-ray.surge.sh', 'https://mart-academy.web.app', 'https://mart-academy.firebaseapp.com'],
+        origin: ['http://localhost:5173', 'https://hideous-ray.surge.sh'],
         credentials: true,
     }
 ));
 app.use(express.json());
 app.use(cookieParser());
 
-
-// Middleware to verify JWT token from Authorization header
-const verifyToken = (req, res, next) => {
-    // Get token from Authorization header: "Bearer <token>"
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.split(" ")[1];
-
+//custom middleware to verify jwt token
+const verifyToken = async (req, res, next) => {
+    //token from cookie
+    const token = req?.cookies?.token;
+    // console.log(token);
     if (!token) {
         return res.status(401).send({ message: 'Unauthorized access' });
     }
 
-    // Verify token
+    //verify token
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
         if (err) {
             return res.status(403).send({ message: 'Forbidden access' });
         }
-        req.decoded = decoded; // attach decoded info to request
+        req.decoded = decoded;
         next();
     });
 };
-
 
 
 // Routes
@@ -77,20 +74,23 @@ async function run() {
 
         // end database and collection code--------------------------------
 
-        // Middleware to verify if user is admin
+        //verify admin middleware--------------------------
         const verifyAdmin = async (req, res, next) => {
             const email = req?.decoded?.email;
-            if (!email) return res.status(401).send({ message: 'Unauthorized access' });
+            // console.log('email inside verify admin', email);
+            const query = { email: email };
 
-            // Find user in DB
-            const user = await users.findOne({ email });
-            if (!user || user.role !== 'admin') {
+            //user find from database
+            const user = await users.findOne(query);
+            // console.log('user inside verify admin', user);
+
+            //check user role
+            const isAdmin = user?.role === 'admin';
+            if (!isAdmin) {
                 return res.status(403).send({ message: 'Forbidden access' });
             }
-
             next();
         };
-
         //end verify admin middleware--------------------------
 
 
@@ -104,39 +104,43 @@ async function run() {
         //end banner api --------------------------------
 
 
-        // Generate JWT token
+        //jwt token api ------------------------------
         app.post('/api/v1/jwt', (req, res) => {
             const user = req.body;
-            if (!user?.email) return res.status(400).send({ message: 'Invalid user data' });
-
-            // Sign token (1 hour expiry)
+            console.log(user, 'inside jwt');
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
 
-            // Send token in response body
-            res.send({ status: true, token });
-        });
+            //token in cookie
+            res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'None', maxAge: 3600000 }); // 1 hour
+            res.send({ status: true });
 
+        });
 
         //end jwt token api ------------------------------
 
-        // Admin check API------------------------------
-        app.get("/api/v1/admin/:email", verifyToken, async (req, res) => {
-            const emailParam = req.params.email;
+        //addmin check api ------------------------------
 
-            // Ensure the JWT user matches the requested email
-            if (req.decoded?.email !== emailParam) {
-                return res.status(403).send({ status: "forbidden", message: "Forbidden access" });
+        app.get("/api/v1/admin/:email", verifyToken, async (req, res) => {
+            const email = req.params.email;
+            //console.log(email,req.decodedUser?.email);
+            if (req.decoded?.email !== email) {
+                return res.status(403).send({ status: "forbidden Access" });
             }
 
-            // Find user by email
-            const user = await users.findOne({ email: emailParam });
+            let query = { email: email };
 
-            // Determine if user is admin
-            const isAdmin = user?.role === "admin";
+            //find user by query
+            const user = await users.findOne(query);
 
-            res.send({ isAdmin });
+            // //make a admin false initially
+            let isAdmin = false;
+
+            if (user) {
+                isAdmin = user?.role === "admin";
+            }
+
+            res.send({ isAdmin: isAdmin });
         });
-
         //end admin check api ------------------------------
 
         //faq api --------------------------------
@@ -178,7 +182,7 @@ async function run() {
         // users api --------------------------------
 
         //user get by email api
-        app.get('/api/v1/users', verifyToken, async (req, res) => {
+        app.get('/api/v1/users',verifyToken, async (req, res) => {
             const email = req.query.email;
             let result;
             // console.log(email);
@@ -214,7 +218,18 @@ async function run() {
             res.send(result);
         });
 
+  
 
+        //logout api
+        app.post('/api/v1/logout', (req, res) => {
+            res.clearCookie('token', {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'None', // must match your cookie options!
+                path: '/',        // also ensure path matches if you used it when setting cookie
+            });
+            res.send({ message: 'Logged out successfully' });
+        });
         //end users api --------------------------------
 
 
