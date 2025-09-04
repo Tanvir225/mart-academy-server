@@ -14,7 +14,7 @@ require('dotenv').config();
 // Middleware
 app.use(cors(
     {
-        origin: ['http://localhost:5173', 'https://hideous-ray.surge.sh'],
+        origin: ['http://localhost:5173', 'https://hideous-ray.surge.sh','https://mart-academy.web.app','https://mart-academy.firebaseapp.com'],
         credentials: true,
     }
 ));
@@ -182,7 +182,7 @@ async function run() {
         // users api --------------------------------
 
         //user get by email api
-        app.get('/api/v1/users',verifyToken, async (req, res) => {
+        app.get('/api/v1/users', verifyToken, async (req, res) => {
             const email = req.query.email;
             let result;
             // console.log(email);
@@ -205,9 +205,15 @@ async function run() {
         //user post api
         app.post('/api/v1/users', async (req, res) => {
             const user = req.body;
-            // console.log(user);
-            const result = await users.insertOne(user);
-            res.send(result);
+            const { email } = user;
+
+            const existingUser = await users.findOne({ email: email });
+            if (existingUser) {
+                res.send({ message: "This user already exists" });
+            } else {
+                const result = await users.insertOne(user);
+                res.send(result);
+            }
         });
 
         //single user delete api
@@ -218,7 +224,7 @@ async function run() {
             res.send(result);
         });
 
-  
+
 
         //logout api
         app.post('/api/v1/logout', (req, res) => {
