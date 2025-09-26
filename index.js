@@ -19,7 +19,7 @@ app.use(cors(
             "https://hideous-ray.surge.sh",
             "https://mart-academy.web.app",
             "https://mart-academy.firebaseapp.com",
-            "https://mart-academy.vercel.app"
+
         ],
         credentials: true,
     }
@@ -115,13 +115,16 @@ async function run() {
             const user = req.body;
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
 
+
             res.cookie("token", token, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === "production", // true in production
-                sameSite: "none",                              // allow cross-origin
-                maxAge: 24 * 60 * 60 * 1000                    // 1 day
+                secure: true,
+                sameSite: "none",
+                path: "/",
             });
 
+            res.setHeader("Access-Control-Allow-Credentials", "true");
+            res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
             res.send({ status: true });
         });
 
@@ -132,25 +135,19 @@ async function run() {
 
         app.get("/api/v1/admin/:email", verifyToken, async (req, res) => {
             const email = req.params.email;
-            //console.log(email,req.decodedUser?.email);
+
+            // check if decoded email matches param
             if (req.decoded?.email !== email) {
                 return res.status(403).send({ status: "forbidden Access" });
             }
 
-            let query = { email: email };
+            const user = await users.findOne({ email });
 
-            //find user by query
-            const user = await users.findOne(query);
-
-            // //make a admin false initially
-            let isAdmin = false;
-
-            if (user) {
-                isAdmin = user?.role === "admin";
-            }
-
-            res.send({ isAdmin: isAdmin });
+            const isAdmin = user?.role === "admin";
+            console.log(isAdmin);
+            res.send({ isAdmin });
         });
+
         //end admin check api ------------------------------
 
         //faq api --------------------------------
@@ -193,24 +190,21 @@ async function run() {
 
         //user get by email api
         app.get('/api/v1/users', verifyToken, verifyAdmin, async (req, res) => {
-            const email = req.query.email;
-            let result;
-            // console.log(email);
-            const query = { email: email };
-            // console.log(query);
-            if (query?.email) {
-                // If email is provided, find user by email
-                result = await users.findOne(query);
 
-            }
-            else {
-                // If no email is provided, return all users
-                const cursor = users.find({});
-                result = await cursor.toArray();
-            }
-
+            const cursor = users.find({});
+            const result = await cursor.toArray();
             res.send(result);
         });
+
+
+        //single user get api
+        app.get('/api/v1/users/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const result = await users.findOne(query);
+            res.send(result);
+        });
+
 
         //user post api
         app.post('/api/v1/users', async (req, res) => {
@@ -238,12 +232,13 @@ async function run() {
 
         //logout api
         app.post('/api/v1/logout', (req, res) => {
-            res.clearCookie('token', {
+            res.clearCookie("token", {
                 httpOnly: true,
                 secure: true,
-                sameSite: 'None', // must match your cookie options!
-                path: '/',        // also ensure path matches if you used it when setting cookie
+                sameSite: "none",
+                path: "/",
             });
+
             res.send({ message: 'Logged out successfully' });
         });
         //end users api --------------------------------
