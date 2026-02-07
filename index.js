@@ -185,6 +185,21 @@ async function run() {
 
         //end courses api --------------------------------
 
+        // patch api course
+        app.patch("/api/v1/courses/:id", async (req, res) => {
+            const id = req.params.id;
+            const {_id,...data} = req.body;
+            console.log(data,id);
+
+            const result = courses.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: data }
+            );
+
+            res.send(result);
+        });
+
+
 
         // users api --------------------------------
 
