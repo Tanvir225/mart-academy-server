@@ -77,6 +77,7 @@ async function run() {
         const faq = database.collection("faq");
         const courses = database.collection("courses");
         const users = database.collection("users");
+        const notifications = database.collection("notifications");
 
         // end database and collection code--------------------------------
 
@@ -188,16 +189,63 @@ async function run() {
         // patch api course
         app.patch("/api/v1/courses/:id", async (req, res) => {
             const id = req.params.id;
-            const {_id,...data} = req.body;
-            console.log(data,id);
+            const { _id, ...data } = req.body;
 
-            const result = courses.updateOne(
+            // 1️⃣ Get old course
+            const oldCourse = await courses.findOne({
+                _id: new ObjectId(id),
+            });
+
+            // 2️⃣ Update course
+            const result = await courses.updateOne(
                 { _id: new ObjectId(id) },
                 { $set: data }
             );
 
+            // 3️⃣ Detect changes
+            let updatedPart = "course";
+
+            if (
+                JSON.stringify(oldCourse.summary) !==
+                JSON.stringify(data.summary)
+            ) {
+                updatedPart = "summary";
+            }
+
+            if (
+                JSON.stringify(oldCourse.modules) !==
+                JSON.stringify(data.modules)
+            ) {
+                updatedPart = "modules";
+            }
+
+            // 4️⃣ Create notification
+            const notificationDoc = {
+                courseId: id,
+                courseTitle: oldCourse.title,
+                type: `${updatedPart}_update`,
+                message: `Course ${updatedPart} has been updated`,
+                createdAt: new Date(),
+                isRead: false,
+            };
+
+            await notifications.insertOne(notificationDoc);
+
             res.send(result);
         });
+
+        //notifications get api---------------------
+        app.get("/api/v1/notifications", async (req, res) => {
+            const data = await notifications
+                .find()
+                .sort({ createdAt: -1 })
+                .limit(10)
+                .toArray();
+
+            res.send(data);
+        });
+
+        //=======================
 
 
 
