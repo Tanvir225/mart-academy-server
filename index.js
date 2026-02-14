@@ -311,7 +311,7 @@ async function run() {
         // users api --------------------------------
 
         //user get by email api
-        app.get('/api/v1/users', verifyToken,verifyAdmin, async (req, res) => {
+        app.get('/api/v1/users', verifyToken, verifyAdmin, async (req, res) => {
 
             const cursor = users.find({});
             const result = await cursor.toArray();
@@ -364,6 +364,26 @@ async function run() {
             res.send(result);
         }
         );
+
+        // -----------------------
+
+        // course upcomming batch api
+        app.get("/api/v1/batches/course/:id",verifyToken, async (req, res) => {
+            const id = req.params.id;
+
+            const today = new Date().toISOString().split("T")[0];
+
+            const result = await batches
+                .find({
+                    courseId: id,
+                    startDate: { $gte: today }, // future batches only
+                })
+                .toArray();
+
+            res.send(result);
+        });
+
+        // course upcomming batch api end-----------------------
 
 
         //logout api
