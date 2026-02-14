@@ -78,6 +78,7 @@ async function run() {
         const courses = database.collection("courses");
         const users = database.collection("users");
         const notifications = database.collection("notifications");
+        const batches = database.collection("batches");
 
         // end database and collection code--------------------------------
 
@@ -174,6 +175,17 @@ async function run() {
         }
         );
 
+        // course delete api-----------------------------
+        app.delete('/api/v1/courses/:id', verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+
+            // console.log(id,query);
+            const result = await courses.deleteOne(query);
+            res.send(result);
+        });
+        // end course delete api-----------------------------
+
         //sigle course api -----------------------------
         app.get('/api/v1/courses/:id', async (req, res) => {
             const id = req.params.id;
@@ -187,7 +199,7 @@ async function run() {
         //end courses api --------------------------------
 
         // patch api course
-        app.patch("/api/v1/courses/:id", async (req, res) => {
+        app.patch("/api/v1/courses/:id", verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const { _id, ...data } = req.body;
 
@@ -247,12 +259,59 @@ async function run() {
 
         //=======================
 
+        // batch post api --------------------------------
+        app.post("/api/v1/batches", verifyToken, verifyAdmin, async (req, res) => {
+            const data = req.body;
+            data.createdAt = new Date();
+            // console.log(data);
+
+            const result = await batches.insertOne(data);
+
+            res.send(result);
+        });
+        // end batch post api --------------------------------
+
+        // batch get api --------------------------------
+        app.get("/api/v1/batches", verifyToken, async (req, res) => {
+            const cursor = batches.find({}).sort({ createdAt: -1 });
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+        // end batch get api --------------------------------
+
+        // batch delete api --------------------------------
+        app.delete("/api/v1/batches/:id", verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            console.log(id, query);
+            const result = await batches.deleteOne(query);
+            res.send(result);
+        }
+        );
+        // end batch delete api --------------------------------    
+
+        // batch patch api --------------------------------
+        app.patch("/api/v1/batches/:id", verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const { _id, ...data } = req.body;
+
+            // console.log(data);
+
+            const result = await batches.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: data }
+            );
+            res.send(result);
+        });
+        // end batch patch api --------------------------------
+
+
 
 
         // users api --------------------------------
 
         //user get by email api
-        app.get('/api/v1/users', verifyToken, verifyAdmin, async (req, res) => {
+        app.get('/api/v1/users', verifyToken,verifyAdmin, async (req, res) => {
 
             const cursor = users.find({});
             const result = await cursor.toArray();
@@ -273,6 +332,7 @@ async function run() {
         app.post('/api/v1/users', async (req, res) => {
             const user = req.body;
             const { email } = user;
+            console.log(user);
 
             const existingUser = await users.findOne({ email: email });
             if (existingUser) {
@@ -291,6 +351,19 @@ async function run() {
             res.send(result);
         });
 
+        // single user patch api
+        app.patch('/api/v1/users/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+            const { _id, ...data } = req.body;
+            const query = { email: email };
+            // console.log(data);
+            const result = await users
+                .updateOne(query, {
+                    $set: data,
+                });
+            res.send(result);
+        }
+        );
 
 
         //logout api
