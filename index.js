@@ -121,13 +121,13 @@ async function run() {
             res.cookie("token", token, {
                 httpOnly: true,
                 secure: true,
-                sameSite: "none",
+                sameSite: "None",
                 path: "/",
+                maxAge: 7 * 24 * 60 * 60 * 1000,
             });
 
-            res.setHeader("Access-Control-Allow-Credentials", "true");
-            res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
             res.send({ status: true });
+
         });
 
 
@@ -368,7 +368,7 @@ async function run() {
         // -----------------------
 
         // course upcomming batch api
-        app.get("/api/v1/batches/course/:id",verifyToken, async (req, res) => {
+        app.get("/api/v1/batches/course/:id", verifyToken, async (req, res) => {
             const id = req.params.id;
 
             const today = new Date().toISOString().split("T")[0];
