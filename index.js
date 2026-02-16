@@ -4,6 +4,7 @@ const cors = require('cors');
 const port = process.env.PORT || 5000;
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
+app.set("trust proxy", 1);
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const e = require('express');
@@ -115,8 +116,12 @@ async function run() {
         //jwt token api ------------------------------
         app.post('/api/v1/jwt', (req, res) => {
             const user = req.body;
-            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
 
+            const token = jwt.sign(
+                user,
+                process.env.ACCESS_TOKEN_SECRET,
+                { expiresIn: '7d' }   // match cookie
+            );
 
             res.cookie("token", token, {
                 httpOnly: true,
@@ -127,8 +132,8 @@ async function run() {
             });
 
             res.send({ status: true });
-
         });
+
 
 
         //end jwt token api ------------------------------
@@ -391,12 +396,13 @@ async function run() {
             res.clearCookie("token", {
                 httpOnly: true,
                 secure: true,
-                sameSite: "none",
+                sameSite: "None",
                 path: "/",
             });
 
             res.send({ message: 'Logged out successfully' });
         });
+
         //end users api --------------------------------
 
 
