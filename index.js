@@ -80,6 +80,7 @@ async function run() {
         const users = database.collection("users");
         const notifications = database.collection("notifications");
         const batches = database.collection("batches");
+        const coupons = database.collection("coupons");
 
         // end database and collection code--------------------------------
 
@@ -251,6 +252,72 @@ async function run() {
             res.send(result);
         });
 
+        // end patch api course
+
+        // course post api-----------------------------
+        app.post('/api/v1/courses', verifyToken, verifyAdmin, async (req, res) => {
+            const data = req.body;
+            data.createdAt = new Date();
+            // console.log(data);
+            const result = await courses.insertOne(data);
+            res.send({ status: 'success', message: 'Course added successfully' });
+        }
+        );
+        // end course post api-----------------------------
+
+
+        // coupoun api-----------------------------
+        app.post("/api/v1/verify-coupon",verifyToken, async (req, res) => {
+            const { code, courseId } = req.body;
+
+            const coupon = await coupons.findOne({
+                code: code.toUpperCase(),
+                status: "active",
+            });
+
+            if (!coupon) {
+                return res.send({
+                    valid: false,
+                    message: "Invalid Coupon",
+                });
+            }
+
+            // expire check
+            const today = new Date().toISOString().split("T")[0];
+            if (coupon.expireDate < today) {
+                return res.send({
+                    valid: false,
+                    message: "Coupon Expired",
+                });
+            }
+
+            // usage limit
+            if (coupon.usedCount >= coupon.maxUse) {
+                return res.send({
+                    valid: false,
+                    message: "Coupon Limit Reached",
+                });
+            }
+
+            // course specific check
+            if (
+                coupon.courseId &&
+                coupon.courseId !== courseId
+            ) {
+                return res.send({
+                    valid: false,
+                    message: "Not valid for this course",
+                });
+            }
+
+            res.send({
+                valid: true,
+                coupon,
+            });
+        });
+        // end coupoun api-----------------------------
+
+
         //notifications get api---------------------
         app.get("/api/v1/notifications", async (req, res) => {
             const data = await notifications
@@ -315,7 +382,7 @@ async function run() {
 
         // users api --------------------------------
 
-        //user get by email api
+        //user get api
         app.get('/api/v1/users', verifyToken, verifyAdmin, async (req, res) => {
 
             const cursor = users.find({});
