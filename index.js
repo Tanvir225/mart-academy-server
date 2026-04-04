@@ -267,7 +267,7 @@ async function run() {
 
 
         // coupoun api-----------------------------
-        app.post("/api/v1/verify-coupon",verifyToken, async (req, res) => {
+        app.post("/api/v1/verify-coupon", verifyToken, async (req, res) => {
             const { code, courseId } = req.body;
 
             const coupon = await coupons.findOne({
@@ -316,6 +316,16 @@ async function run() {
             });
         });
         // end coupoun api-----------------------------
+
+        //all coupons get api-----------------------------
+
+        app.get("/api/v1/coupons", verifyToken, async (req, res) => {
+            const cursor = coupons.find({}).sort({ createdAt: -1 }).limit(10);
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+
+        // end all coupons get api-----------------------------
 
 
         //notifications get api---------------------
