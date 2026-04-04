@@ -319,7 +319,7 @@ async function run() {
 
         //all coupons get api-----------------------------
 
-        app.get("/api/v1/coupons", verifyToken, async (req, res) => {
+        app.get("/api/v1/coupons", async (req, res) => {
             const cursor = coupons.find({}).sort({ createdAt: -1 }).limit(10);
             const result = await cursor.toArray();
             res.send(result);
