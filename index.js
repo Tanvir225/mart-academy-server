@@ -81,6 +81,7 @@ async function run() {
         const notifications = database.collection("notifications");
         const batches = database.collection("batches");
         const coupons = database.collection("coupons");
+        const enrollments = database.collection("enrollments");
 
         // end database and collection code--------------------------------
 
@@ -355,8 +356,20 @@ async function run() {
 
         // batch get api --------------------------------
         app.get("/api/v1/batches", verifyToken, async (req, res) => {
-            const cursor = batches.find({}).sort({ createdAt: -1 });
-            const result = await cursor.toArray();
+            const user = req?.decoded; // assuming verifyToken sets this
+
+            const getUserRole = await users.findOne({ email: user.email });
+            let query = {};
+
+            if (getUserRole?.role !== "admin") {
+                query = { status: "upcoming" };
+            }
+
+            const result = await batches
+                .find(query)
+                .sort({ createdAt: -1 })
+                .toArray();
+
             res.send(result);
         });
         // end batch get api --------------------------------
@@ -377,7 +390,7 @@ async function run() {
             const id = req.params.id;
             const { _id, ...data } = req.body;
 
-            // console.log(data);
+            console.log(data);
 
             const result = await batches.updateOne(
                 { _id: new ObjectId(id) },
@@ -386,6 +399,89 @@ async function run() {
             res.send(result);
         });
         // end batch patch api --------------------------------
+
+
+        // enrollment post api --------------------------------
+
+        app.post("/api/v1/enroll", verifyToken, async (req, res) => {
+            try {
+                const data = req.body;
+
+                // 1️⃣ Check batch availability
+                const batch = await batches.findOne({
+                    _id: new ObjectId(data.batchId),
+                });
+
+                if (!batch) {
+                    return res.send({ success: false, message: "Batch not found" });
+                }
+
+                if (batch.seat <= 0) {
+                    return res.send({ success: false, message: "No seats available" });
+                }
+
+                // 2️⃣ 🔴 Check existing enrollment
+                const existingEnrollment = await enrollments.findOne({
+                    studentEmail: data.studentEmail,
+                    batchId: data.batchId,
+                });
+
+                if (existingEnrollment) {
+                    return res.send({
+                        success: false,
+                        message: "You are already enrolled in this batch",
+                    });
+                }
+
+                // 3️⃣ Apply coupon (if exists)
+                if (data.couponCode) {
+                    const coupon = await coupons.findOne({
+                        code: data.couponCode,
+                    });
+
+                    if (!coupon) {
+                        return res.send({ success: false, message: "Invalid coupon" });
+                    }
+
+                    if (coupon.usedCount >= coupon.maxUse) {
+                        return res.send({ success: false, message: "Coupon limit reached" });
+                    }
+
+                    await coupons.updateOne(
+                        { code: data.couponCode },
+                        { $inc: { usedCount: 1 } }
+                    );
+                }
+
+                // 4️⃣ Save enroll data
+                const enrollData = {
+                    ...data,
+                    // enrolledAt: new Date(),
+                };
+
+                const result = await enrollments.insertOne(enrollData);
+
+                // 5️⃣ Decrement seat
+                await batches.updateOne(
+                    { _id: new ObjectId(data.batchId) },
+                    { $inc: { seat: -1 } }
+                );
+
+                res.send({
+                    success: true,
+                    message: "Enrolled successfully",
+                    result,
+                });
+
+            } catch (error) {
+                console.log(error);
+                res.send({ success: false, message: "Something went wrong" });
+            }
+        });
+        // end enrollment post api --------------------------------
+
+        
+
 
 
 
