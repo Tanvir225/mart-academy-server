@@ -480,11 +480,35 @@ async function run() {
         });
         // end enrollment post api --------------------------------
 
-        
 
 
 
 
+
+
+        // get user course enrollment api --------------------------------
+        app.get("/api/v1/my-courses/:email",verifyToken, async (req, res) => {
+            const studentEmail = req.params.email;
+
+            const enrolls = await enrollments.find({ studentEmail }).toArray();
+
+           
+            const result = [];
+
+            for (const enroll of enrolls) {
+                const batch = await batches.findOne({
+                    _id: new ObjectId(enroll.batchId),
+                });
+
+                result.push({
+                    ...enroll,
+                    batchDetails: batch,
+                });
+            }
+
+            res.send(result);
+        });
+        // end get user course enrollment api --------------------------------
 
         // users api --------------------------------
 
