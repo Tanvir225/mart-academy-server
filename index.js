@@ -400,10 +400,21 @@ async function run() {
         });
         // end batch patch api --------------------------------
 
+        // enrollment get api --------------------------------
+        app.get("/api/v1/enrolls", verifyToken, verifyAdmin, async (req, res) => {
+            const result = await enrollments
+                .find()
+                .sort({ enrolledAt: -1 })
+                .toArray();
+            res.send(result);
+        });
+        // end enrollment get api --------------------------------
+
+
 
         // enrollment post api --------------------------------
 
-        app.post("/api/v1/enroll", verifyToken, async (req, res) => {
+        app.post("/api/v1/enrolls", verifyToken, async (req, res) => {
             try {
                 const data = req.body;
 
@@ -487,12 +498,12 @@ async function run() {
 
 
         // get user course enrollment api --------------------------------
-        app.get("/api/v1/my-courses/:email",verifyToken, async (req, res) => {
+        app.get("/api/v1/my-courses/:email", verifyToken, async (req, res) => {
             const studentEmail = req.params.email;
 
             const enrolls = await enrollments.find({ studentEmail }).toArray();
 
-           
+
             const result = [];
 
             for (const enroll of enrolls) {
