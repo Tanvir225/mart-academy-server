@@ -410,6 +410,66 @@ async function run() {
         });
         // end enrollment get api --------------------------------
 
+        // enrollment patch api --------------------------------
+        app.patch("/api/v1/enrolls/:id", verifyToken, verifyAdmin, async (req, res) => {
+            try {
+                const id = req.params.id;
+                const data = req.body;
+
+                // ❌ prevent empty update
+                if (!data || Object.keys(data).length === 0) {
+                    return res.send({
+                        success: false,
+                        message: "No data provided for update",
+                    });
+                }
+
+                const result = await enrollments.updateOne(
+                    { _id: new ObjectId(id) },
+                    {
+                        $set: {
+                            ...data,
+                            updatedAt: new Date(), // optional
+                        },
+                    }
+                );
+
+                // ❌ not found
+                if (result.matchedCount === 0) {
+                    return res.send({
+                        success: false,
+                        message: "Enrollment not found",
+                    });
+                }
+
+                res.send({
+                    success: true,
+                    message: "Enrollment updated successfully",
+                    result,
+                });
+
+            } catch (error) {
+                console.log(error);
+                res.send({
+                    success: false,
+                    message: "Something went wrong",
+                });
+            }
+        });
+
+        // end enrollment patch api --------------------------------
+
+        // enrollment delete api --------------------------------
+        app.delete("/api/v1/enrolls/:id", verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            console.log(id);
+            const query = { _id: new ObjectId(id) };
+            const result = await enrollments.deleteOne(query);
+            res.send(result);
+        });
+        // end enrollment delete api --------------------------------
+
+
 
 
         // enrollment post api --------------------------------
