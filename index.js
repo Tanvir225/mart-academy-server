@@ -82,6 +82,7 @@ async function run() {
         const batches = database.collection("batches");
         const coupons = database.collection("coupons");
         const enrollments = database.collection("enrollments");
+        const story = database.collection("story");
 
         // end database and collection code--------------------------------
 
@@ -207,50 +208,28 @@ async function run() {
 
         // patch api course
         app.patch("/api/v1/courses/:id", verifyToken, verifyAdmin, async (req, res) => {
-            const id = req.params.id;
-            const { _id, ...data } = req.body;
+            try {
+                const id = req.params.id;
+                const { _id, ...data } = req.body;
+                // console.log(data);
+                const result = await courses.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: { ...data, updatedAt: new Date() } }
+                );
 
-            // 1️⃣ Get old course
-            const oldCourse = await courses.findOne({
-                _id: new ObjectId(id),
-            });
+                res.send({
+                    success: true,
+                    message: "Course updated successfully",
+                    result,
+                });
 
-            // 2️⃣ Update course
-            const result = await courses.updateOne(
-                { _id: new ObjectId(id) },
-                { $set: data }
-            );
-
-            // 3️⃣ Detect changes
-            let updatedPart = "course";
-
-            if (
-                JSON.stringify(oldCourse.summary) !==
-                JSON.stringify(data.summary)
-            ) {
-                updatedPart = "summary";
+            } catch (error) {
+                console.log(error);
+                res.send({
+                    success: false,
+                    message: "Something went wrong",
+                });
             }
-
-            if (
-                JSON.stringify(oldCourse.modules) !==
-                JSON.stringify(data.modules)
-            ) {
-                updatedPart = "modules";
-            }
-
-            // 4️⃣ Create notification
-            const notificationDoc = {
-                courseId: id,
-                courseTitle: oldCourse.title,
-                type: `${updatedPart}_update`,
-                message: `Course ${updatedPart} has been updated`,
-                createdAt: new Date(),
-                isRead: false,
-            };
-
-            await notifications.insertOne(notificationDoc);
-
-            res.send(result);
         });
 
         // end patch api course
@@ -329,18 +308,7 @@ async function run() {
         // end all coupons get api-----------------------------
 
 
-        //notifications get api---------------------
-        app.get("/api/v1/notifications", async (req, res) => {
-            const data = await notifications
-                .find()
-                .sort({ createdAt: -1 })
-                .limit(10)
-                .toArray();
 
-            res.send(data);
-        });
-
-        //=======================
 
         // batch post api --------------------------------
         app.post("/api/v1/batches", verifyToken, verifyAdmin, async (req, res) => {
@@ -387,18 +355,122 @@ async function run() {
 
         // batch patch api --------------------------------
         app.patch("/api/v1/batches/:id", verifyToken, verifyAdmin, async (req, res) => {
-            const id = req.params.id;
-            const { _id, ...data } = req.body;
+            try {
+                const id = req.params.id;
+                const { _id, ...data } = req.body;
 
-            console.log(data);
+                // console.log(data,id);
 
-            const result = await batches.updateOne(
-                { _id: new ObjectId(id) },
-                { $set: data }
-            );
-            res.send(result);
+                if (!Object.keys(data).length) {
+                    return res.send({ success: false, message: "No data provided" });
+                }
+
+                // 1️⃣ Get old batch
+                const oldBatch = await batches.findOne({
+                    _id: new ObjectId(id),
+                });
+
+                if (!oldBatch) {
+                    return res.send({ success: false, message: "Batch not found" });
+                }
+
+                // 2️⃣ Update batch
+                const result = await batches.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: { ...data, updatedAt: new Date() } }
+                );
+
+                // 3️⃣ Detect changes (smart)
+                let updatedParts = [];
+
+                if (data.batchName && data.batchName !== oldBatch.batchName) {
+                    updatedParts.push("name");
+                }
+
+                if (data.seat !== undefined && data.seat !== oldBatch.seat) {
+                    updatedParts.push("seat");
+                }
+
+                if (data.startDate && data.startDate !== oldBatch.startDate) {
+                    updatedParts.push("start date");
+                }
+
+                // modules detection 🔥
+                if (
+                    data.modules &&
+                    JSON.stringify(data.modules) !== JSON.stringify(oldBatch.modules)
+                ) {
+                    updatedParts.push("modules");
+                }
+
+                // ❌ No meaningful change → no notification
+                if (updatedParts.length === 0) {
+                    return res.send({
+                        success: true,
+                        message: "Batch updated (no significant changes)",
+                        result,
+                    });
+                }
+
+                // 4️⃣ Find only this batch's enrolled students
+                const enrolledStudents = await enrollments
+                    .find({ batchId: String(id) })
+                    .toArray();
+
+                console.log(enrolledStudents);
+
+                // 5️⃣ Create targeted notifications
+                if (enrolledStudents.length > 0) {
+                    const notificationDocs = enrolledStudents.map((student) => ({
+                        userEmail: student.studentEmail, // 🎯 target ভিত্তিক
+                        batchId: id,
+                        batchName: oldBatch.batchName,
+                        type: "batch_update",
+                        updatedParts,
+                        message: `${oldBatch.batchName}: ${updatedParts.join(", ")} has been updated`,
+                        createdAt: new Date(),
+                        isRead: false,
+                    }));
+
+                    await notifications.insertMany(notificationDocs);
+                }
+
+                res.send({
+                    success: true,
+                    message: "Batch updated & notifications sent",
+                    result,
+                });
+
+            } catch (error) {
+                console.log(error);
+                res.send({
+                    success: false,
+                    message: "Something went wrong",
+                });
+            }
         });
         // end batch patch api --------------------------------
+
+        //notifications get api---------------------
+        app.get("/api/v1/notifications", verifyToken, async (req, res) => {
+            try {
+                const email = req.decoded.email; // 🔥 token থেকে
+
+                const result = await notifications
+                    .find({ userEmail: email })
+                    .sort({ createdAt: -1 })
+                    .limit(10)
+                    .toArray();
+
+                res.send(result);
+
+            } catch (error) {
+                console.log(error);
+                res.send({ success: false, message: "Failed to fetch notifications" });
+            }
+        });
+
+        //=======================
 
         // enrollment get api --------------------------------
         app.get("/api/v1/enrolls", verifyToken, verifyAdmin, async (req, res) => {
@@ -657,6 +729,31 @@ async function run() {
         });
 
         // course upcomming batch api end-----------------------
+
+        // success story get api------------------
+        app.get('/api/v1/story', async (req, res) => {
+            const result = await story
+                .find()
+                .sort({ createdAt: -1 })
+                .limit(10)
+                .toArray();
+
+            res.send(result);
+        })
+        //end story get api---------------
+
+        // story post api---------------
+        app.post('/api/v1/story', async (req, res) => {
+
+            const data = req.body;
+            data.createdAt = new Date();
+            console.log(data);
+
+            const result = await story.insertOne(data);
+
+            res.send(result);
+
+        })
 
 
         //logout api
