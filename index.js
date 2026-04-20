@@ -452,9 +452,9 @@ async function run() {
         // end batch patch api --------------------------------
 
         //notifications get api---------------------
-        app.get("/api/v1/notifications", verifyToken, async (req, res) => {
+        app.get("/api/v1/notifications/:email", async (req, res) => {
             try {
-                const email = req.decoded.email; // 🔥 token থেকে
+                const email = req.params.email; // 🔥 params theke
 
                 const result = await notifications
                     .find({ userEmail: email })
