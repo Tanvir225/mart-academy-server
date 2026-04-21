@@ -346,7 +346,7 @@ async function run() {
         app.delete("/api/v1/batches/:id", verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
-            console.log(id, query);
+            // console.log(id, query);
             const result = await batches.deleteOne(query);
             res.send(result);
         }
@@ -417,7 +417,7 @@ async function run() {
                     .find({ batchId: String(id) })
                     .toArray();
 
-                console.log(enrolledStudents);
+                // console.log(enrolledStudents);
 
                 // 5️⃣ Create targeted notifications
                 if (enrolledStudents.length > 0) {
@@ -677,7 +677,7 @@ async function run() {
         app.post('/api/v1/users', async (req, res) => {
             const user = req.body;
             const { email } = user;
-            console.log(user);
+            // console.log(user);
 
             const existingUser = await users.findOne({ email: email });
             if (existingUser) {
