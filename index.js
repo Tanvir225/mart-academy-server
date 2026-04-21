@@ -747,11 +747,16 @@ async function run() {
 
             const data = req.body;
             data.createdAt = new Date();
-            console.log(data);
+            // console.log(data);
 
-            const result = await story.insertOne(data);
+            const existingStory = await story.findOne({ email: data?.email , courseTitle: data?.courseTitle  });
 
-            res.send(result);
+            if (existingStory) {
+                res.send({ message: "You have already shared your story for this course",status:400});
+            } else {
+                const result = await story.insertOne(data);
+                res.send(result, { message: "Story shared successfully" });
+            }   
 
         })
 
