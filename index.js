@@ -61,7 +61,7 @@ const uri = `mongodb+srv://${process.env.academyUser}:${process.env.academyPassw
 const client = new MongoClient(uri, {
     serverApi: {
         version: ServerApiVersion.v1,
-        strict: true,
+        strict: false,
         deprecationErrors: true,
     }
 });
@@ -825,6 +825,172 @@ async function run() {
 
         //end users api --------------------------------
 
+
+
+        // =============================
+        // admin state api -----------------
+        // =============================
+
+        // admin dashboard stats api
+
+        app.get("/api/v1/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
+            try {
+
+                // total students (unique emails)
+                const totalStudents = await enrollments.distinct("studentEmail");
+
+                // total courses
+                const totalCourses = await courses.countDocuments();
+
+                // total batches
+                const totalBatches = await batches.countDocuments();
+
+                // total revenue (only paid)
+                const revenueData = await enrollments.aggregate([
+                    {
+                        $match: { paymentStatus: "paid" }
+                    },
+                    {
+                        $group: {
+                            _id: null,
+                            total: { $sum: "$amount" }
+                        }
+                    }
+                ]).toArray();
+
+                const totalRevenue = revenueData[0]?.total || 0;
+
+                res.send({
+                    totalStudents: totalStudents.length,
+                    totalCourses,
+                    totalBatches,
+                    totalRevenue
+                });
+
+            } catch (error) {
+                console.log(error);
+                res.send({ success: false });
+            }
+        });
+
+        // end admin dashboard stats api
+
+
+        // enrollment stats api
+        app.get("/api/v1/enrollment-stats", verifyToken, verifyAdmin, async (req, res) => {
+            const data = await enrollments.aggregate([
+                {
+                    $group: {
+                        _id: { $substr: ["$enrolledAt", 0, 10] }, // date
+                        count: { $sum: 1 }
+                    }
+                },
+                { $sort: { _id: 1 } }
+            ]).toArray();
+
+            res.send(data);
+        });
+        // end enrollment stats api
+
+        // top courses by enrollment api
+        app.get("/api/v1/top-courses", verifyToken, verifyAdmin, async (req, res) => {
+            const data = await enrollments.aggregate([
+                {
+                    $group: {
+                        _id: "$courseTitle",
+                        totalEnroll: { $sum: 1 }
+                    }
+                },
+                { $sort: { totalEnroll: -1 } },
+                { $limit: 5 }
+            ]).toArray();
+
+            res.send(data);
+        });
+        // end top courses by enrollment api
+
+        // recent enrollments api
+        app.get("/api/v1/recent-enrollments", verifyToken, verifyAdmin, async (req, res) => {
+            const data = await enrollments
+                .find()
+                .sort({ enrolledAt: -1 })
+                .limit(20)
+                .toArray();
+
+            res.send(data);
+        });
+        // end recent enrollments api
+
+        // top batches income api
+        // 🔥 Top 5 income generating batches
+        app.get("/api/v1/top-batch-income", verifyToken, verifyAdmin, async (req, res) => {
+            try {
+                const data = await enrollments.aggregate([
+                    {
+                        $match: {
+                            paymentStatus: "paid"
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: {
+                                batchId: "$batchId",
+                                batchName: "$batchName",
+                                courseTitle: "$courseTitle"
+                            },
+                            totalIncome: { $sum: "$amount" }
+                        }
+                    },
+                    {
+                        $sort: { totalIncome: -1 }
+                    },
+                    {
+                        $limit: 50
+                    }
+                ]).toArray();
+
+                res.send(data);
+
+            } catch (error) {
+                console.log(error);
+                res.send({ success: false });
+            }
+        });
+        // end top batches income api
+
+        // gender states api
+        app.get("/api/v1/user-gender-stats", verifyToken, verifyAdmin, async (req, res) => {
+            try {
+                const data = await users.aggregate([
+                    {
+                        $project: {
+                            gender: {
+                                $ifNull: ["$gender", "unknown"]
+                            }
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: "$gender",
+                            count: { $sum: 1 }
+                        }
+                    }
+                ]).toArray();
+
+                res.send(data);
+
+            } catch (error) {
+                console.log(error);
+                res.send({ success: false });
+            }
+        });
+
+        // end gender states api
+
+
+        // =============================
+        // end admin state api -----------------
+        // =============================
 
 
 
