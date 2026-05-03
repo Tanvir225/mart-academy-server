@@ -307,6 +307,56 @@ async function run() {
 
         // end all coupons get api-----------------------------
 
+        // single coupon post api-----------------------------
+        app.post("/api/v1/coupons", verifyToken, verifyAdmin, async (req, res) => {
+            const data = req.body;
+            data.code = data.code.toUpperCase();
+            data.createdAt = new Date();
+
+            // console.log(data);
+            const existingCoupon = await coupons.findOne({ code: data.code });
+            if (existingCoupon) {
+                return res.send({ success: false, message: "Coupon code already exists" });
+            }
+            const result = await coupons.insertOne(data);
+            res.send(result);
+        }
+        );
+        // end single coupon post api-----------------------------
+
+        // coupon delete api-----------------------------
+        app.delete("/api/v1/coupons/:id", verifyToken, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            // console.log(id,query);
+            const result = await coupons.deleteOne(query);
+            res.send(result);
+        });
+        // end coupon delete api-----------------------------
+
+        // coupon patch api-----------------------------
+        app.patch("/api/v1/coupons/:id", verifyToken, verifyAdmin, async (req, res) => {
+            try {
+                const id = req.params.id;
+                const { _id, ...data } = req.body;
+                // console.log(id,data);
+                if (!Object.keys(data).length) {
+                    return res.send({ success: false, message: "No data provided for update" });
+                }
+                const result = await coupons.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: { ...data, updatedAt: new Date() } }
+                );
+                if (result.matchedCount === 0) {
+                    return res.send({ success: false, message: "Coupon not found" });
+                }
+                res.send({ success: true, message: "Coupon updated successfully", result });
+            } catch (error) {
+                console.log(error);
+                res.send({ success: false, message: "Something went wrong" });
+            }
+        });
+        // end coupon patch api-----------------------------    
 
 
 
@@ -701,7 +751,7 @@ async function run() {
             const email = req.params.email;
             const { _id, ...data } = req.body;
             const query = { email: email };
-            // console.log(data);
+            // console.log(data,query);
             const result = await users
                 .updateOne(query, {
                     $set: data,
@@ -749,14 +799,14 @@ async function run() {
             data.createdAt = new Date();
             // console.log(data);
 
-            const existingStory = await story.findOne({ email: data?.email , courseTitle: data?.courseTitle  });
+            const existingStory = await story.findOne({ email: data?.email, courseTitle: data?.courseTitle });
 
             if (existingStory) {
-                res.send({ message: "You have already shared your story for this course",status:400});
+                res.send({ message: "You have already shared your story for this course", status: 400 });
             } else {
                 const result = await story.insertOne(data);
                 res.send(result, { message: "Story shared successfully" });
-            }   
+            }
 
         })
 
