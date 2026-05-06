@@ -375,12 +375,21 @@ async function run() {
         // batch get api --------------------------------
         app.get("/api/v1/batches", verifyToken, async (req, res) => {
             const user = req?.decoded; // assuming verifyToken sets this
+            const { courseName } = req.query; // optional search query
 
             const getUserRole = await users.findOne({ email: user.email });
             let query = {};
 
             if (getUserRole?.role !== "admin") {
                 query = { status: "upcoming" };
+            }
+
+            // 🔥 Add regex search
+            if (courseName) {
+                query.courseName = {
+                    $regex: courseName,
+                    $options: "i" // case-insensitive
+                };
             }
 
             const result = await batches
@@ -986,6 +995,38 @@ async function run() {
         });
 
         // end gender states api
+
+        // -=============================
+        // 🔥 Enrollment Status Stats
+        // ===============================
+        app.get("/api/v1/enrollment-status-stats", verifyToken, verifyAdmin, async (req, res) => {
+            try {
+                const data = await enrollments.aggregate([
+                    {
+                        $project: {
+                            status: {
+                                $ifNull: ["$status", "pending"] // fallback safety
+                            }
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: "$status",
+                            count: { $sum: 1 }
+                        }
+                    }
+                ]).toArray();
+
+                res.send(data);
+
+            } catch (error) {
+                console.log(error);
+                res.send({ success: false });
+            }
+        });
+
+        // end enrollment status stats api
+
 
 
         // =============================
