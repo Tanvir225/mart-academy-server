@@ -791,14 +791,12 @@ async function run() {
 
         // success story get api------------------
         app.get('/api/v1/story', async (req, res) => {
-            const result = await story
-                .find()
-                .sort({ createdAt: -1 })
-                .limit(10)
-                .toArray();
+            const result = await story.aggregate([
+                { $sample: { size: 10 } }
+            ]).toArray();
 
             res.send(result);
-        })
+        });
         //end story get api---------------
 
         // story post api---------------
